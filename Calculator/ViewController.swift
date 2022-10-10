@@ -1,8 +1,4 @@
-/*
- ПРИ НАЖАТИИ НА ЛЮБУЮ ЦИФРУ ТЕКСТ НА КНОПКЕ СБРОСА БУДЕТ С, ПРИ СБРОСЕ  -> будет АС.
- НЕ ПОЛУЧИЛОСЬ СДЕЛАТЬ У НИХ НОРМАЛЬНЙ РАЗМЕР ТЕКСТА.
- НЕ УСПЕЛ СДЕЛАТЬ ВЫЧИСЛЕНИЕ РАЗЛИЧНЫХ ДЕЙСТВИЙ ОДНОВРЕМЕННО ( НАПРИМЕР  2+2-2)
- ЕСЛИ РЕЗУЛЬТАТ БОЛЬШЕ 9 ЦИФР  -->  Ошибка , В АЙФОНЕ РЕЗУЛЬТАТ БУДЕТ  3.5e39 ( не знаю как сделать также, поэтому выдаю ошибку)                  ИЗ-ЗА ЭТОГО БЫВАЮТ БАГИ */
+/// Программа еще далеко не идеальная, но пофикшено много багов, добавлена экспоненциальная форма и возможность вычисления действий практически любой сложности. Код не успел привести в нормальный вид, может даже есть лишние переменные
 import UIKit
 class ViewController: UIViewController {
     
@@ -13,9 +9,22 @@ class ViewController: UIViewController {
     private var currentNumber : Double = 0
     private var currentNumberStr : String = "0"
     private var firstNumber : Double = 0
+    private var secondNumber : Double = 0
+    private var thirdNumber : Double = 0
+    private var resultToLabel = ""
     
-    private var isFirstDone = true
+    private var firstAction = ActionType.nothing
+    private var secondAction = ActionType.nothing
+    private var thirdAction = ActionType.nothing
+    
+    private var isFirstNumExists = false
+    private var isSecondNumExists = false
+    private var isThirdNumExists = false
+    private var isFinalAction = false
+    private var isTapNubmerAfterCompute = false
     private var isDot = false
+    private var isLastComputed = false
+    private var isActionTapped = false
     
     // MARK: - IBOutlets
     @IBOutlet weak var labelVIew: UIView!
@@ -28,6 +37,7 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         addSwipe(to: labelVIew, with: .left)
         addSwipe(to: labelVIew, with: .right)
+        
     }
     override func viewWillLayoutSubviews() {
         view.layoutIfNeeded()
@@ -44,50 +54,83 @@ class ViewController: UIViewController {
         
     }
     @objc private func deleteDigit(){
-        currentNumberStr.remove(at: currentNumberStr.index(before: currentNumberStr.endIndex))
-        if currentNumberStr == "" {currentNumberStr = "0"}
-        mainLabel.text = currentNumberStr
-    }
-    
-    private func currentToFirst(){
-        guard let str = Double(currentNumberStr) else {return}
-        firstNumber = str
-        setCurrNumToZero()
+        if Int(resultToLabel) != 0{
+            resultToLabel.remove(at: resultToLabel.index(before: resultToLabel.endIndex))
+            currentNumberStr = resultToLabel
+            if resultToLabel == "" {
+                resultToLabel = "0"
+                currentNumber = 0
+                currentNumberStr = "0"
+            }
+        } else{
+            currentNumberStr.remove(at: currentNumberStr.index(before: currentNumberStr.endIndex))
+            if currentNumberStr == "" {
+                currentNumber = 0
+                currentNumberStr = "0"
+            }
+            currentNumberStr = currentNumberStr.replacingOccurrences(of: ".", with: ",")
+            resultToLabel = currentNumberStr
+        }
+        mainLabel.text = resultToLabel
     }
     
     private func intResultToLabel(){
         var checkerString = String(intChecker)
         if checkerString.count > 9{
-            if checkerString.count>14{
-                checkerString = "Too many digits"
-            } else{
-                mainLabel.font = mainLabel.font.withSize(50)
-            }
+            checkerString = intChecker.scientificFormatted
         }
-        mainLabel.text = checkerString
+        resultToLabel = checkerString
+        setSpacesToLabel()
+        
+        mainLabel.text = resultToLabel
     }
+    
     private func doubleResultToLabel(){
-        var checkerString = String(result)
-        checkerString = checkerString.replacingOccurrences(of: ".", with: ",")
+        var checkerString = String(firstNumber)
         if checkerString.count > 9{
-            if checkerString.count>14{
-                checkerString = "Too many digits"
-            } else{
-                mainLabel.font = mainLabel.font.withSize(50)
-            }
+            checkerString = firstNumber.scientificFormatted
         }
-        mainLabel.text = checkerString
+        checkerString = checkerString.replacingOccurrences(of: ".", with: ",")
+        resultToLabel =  checkerString
+        mainLabel.text = resultToLabel
         
     }
     
     private func tapNumber(char :Int){
         currentNumberStr += String(char)
-        mainLabel.text = currentNumberStr
+        currentNumberStr = currentNumberStr.replacingOccurrences(of: ",", with: ".")
+        guard let str = Double(currentNumberStr) else {return}
+        currentNumber = str
+        currentNumberStr = currentNumberStr.replacingOccurrences(of: ".", with: ",")
+        resultToLabel = currentNumberStr
+        if  Int(resultToLabel) ==  Int(currentNumber) { setSpacesToLabel() }
+        mainLabel.text = resultToLabel
+        isActionTapped = false
     }
     
+    private func setSpacesToLabel() {
+        if (resultToLabel.count > 6) {
+            resultToLabel.insert(" ", at: resultToLabel.index(resultToLabel.endIndex, offsetBy: -6))
+        }
+        if (resultToLabel.count > 3) {
+            resultToLabel.insert(" ", at: resultToLabel.index(resultToLabel.endIndex, offsetBy: -3))
+        }
+    }
+    
+    private func clearAfterComputing(){
+        secondNumber = 0
+        thirdNumber = 0
+        isThirdNumExists = false
+        isFirstNumExists = false
+        isSecondNumExists = false
+        thirdAction = ActionType.nothing
+        secondAction = ActionType.nothing
+        isTapNubmerAfterCompute = true
+        isActionTapped = false
+    }
     private func intOrDouble(){
-        intChecker = Int(result)
-        if Double(intChecker) == result {
+        intChecker = Int(firstNumber)
+        if Double(intChecker) == firstNumber {
             intResultToLabel()
         } else {doubleResultToLabel()}
     }
@@ -97,32 +140,147 @@ class ViewController: UIViewController {
         currentNumberStr = ""
     }
     
-    private func intOrDoubleForFirstNum(){
-        intChecker = Int(firstNumber)
-        if Double(intChecker) == firstNumber {
-            intResultToLabel()
-        } else { doubleFirstNumToLabel() }
-    }
-    
-    private func doubleFirstNumToLabel() {
-        var checkerString = String(firstNumber)
-        checkerString = checkerString.replacingOccurrences(of: ".", with: ",")
-        mainLabel.text = checkerString
-    }
-    
     private func clearEverything(){
+        intChecker = 0
         result = 0
         currentNumber = 0
         currentNumberStr = "0"
-        isFirstDone = true
+        firstNumber = 0
+        secondNumber = 0
+        thirdNumber = 0
         isDot = false
-        mainLabel.font = mainLabel.font.withSize(73)
+        isFirstNumExists = false
+        isSecondNumExists = false
+        isThirdNumExists = false
+        isLastComputed = false
+        isFinalAction = false
     }
     
+    func toNewNumber (actionType: ActionType = .nothing) {
+        if isActionTapped == true{
+            return
+        }
+        isActionTapped = true
+        if (!isFirstNumExists) {
+            isFirstNumExists = true
+            guard let str = Double(currentNumberStr) else{ return }
+            firstNumber = str
+            if (actionType != .nothing) {
+                firstAction = actionType
+            }
+            setCurrNumToZero()
+            isLastComputed = false
+        } else {
+            if(!isSecondNumExists) {
+                isSecondNumExists = true
+                guard let str = Double(currentNumberStr) else{ return }
+                secondNumber = str
+                if (actionType != .nothing) {
+                    secondAction = actionType
+                }
+                setCurrNumToZero()
+                isLastComputed = false
+            } else {
+                if(!isThirdNumExists) {
+                    isThirdNumExists = true
+                    guard let str = Double(currentNumberStr) else{ return }
+                    thirdNumber = str
+                    if (actionType != .nothing) {
+                        thirdAction = actionType
+                    }
+                    setCurrNumToZero()
+                    isLastComputed = false
+                    
+                } else {
+                    compute()
+                    isThirdNumExists = true
+                    thirdNumber = currentNumber
+                    if (actionType != .nothing) {
+                        thirdAction = actionType
+                        
+                    }
+                    setCurrNumToZero()
+                    isLastComputed = false
+                }
+            }
+        }
+    }
+    
+    func compute() {
+        let firstActionLP: Bool = (firstAction == .plus || firstAction == .minus)
+        let secondActionHP: Bool = (secondAction == .multiply || secondAction == .divide)
+        if firstActionLP && secondActionHP {
+            computeSecondAction()
+            secondAction = thirdAction
+            thirdNumber = 0
+            thirdAction = .nothing
+            isThirdNumExists = false
+        } else {
+            computeFirstAction()
+            secondNumber = thirdNumber
+            firstAction = secondAction
+            thirdNumber = 0
+            secondAction = thirdAction
+            isThirdNumExists = false
+        }
+    }
+    
+    func computeFirstAction() {
+        if (isFirstNumExists && isSecondNumExists) {
+            switch firstAction {
+            case .plus: do {
+                self.firstNumber += secondNumber
+            }
+            case .minus: do {
+                self.firstNumber -= secondNumber
+            }
+            case .multiply: do {
+                self.firstNumber *= secondNumber
+            }
+            case .divide: do {
+                if (self.secondNumber == 0) {
+                    mainLabel.text = "Ошибка"
+                    return
+                }
+                self.firstNumber /= secondNumber
+            }
+            case .nothing: return
+            }
+        }
+        intOrDouble()
+    }
+    func computeSecondAction() {
+        if (isSecondNumExists && isThirdNumExists) {
+            switch secondAction {
+            case .plus: do {
+                self.secondNumber += thirdNumber
+            }
+            case .minus: do {
+                self.secondNumber -= thirdNumber
+            }
+            case .multiply: do {
+                self.secondNumber *= thirdNumber
+            }
+            case .divide: do {
+                if (self.thirdNumber == 0) {
+                    mainLabel.text = "Ошибка"
+                    return
+                }
+                self.secondNumber /= thirdNumber
+            }
+            case .nothing: return
+            }
+        }
+    }
     // MARK: - IBActions
     @IBAction func digitButtons(_ sender: UIButton){
+        if currentNumberStr.count >= 9 { return }
+        if isTapNubmerAfterCompute == true{
+            currentNumberStr = ""
+            currentNumber = 0
+            isTapNubmerAfterCompute = false
+        }
         if currentNumberStr == "0" { currentNumberStr = ""}
-        if currentNumberStr.count == 9{ return }
         if sender.tag != 10{ tapNumber(char: sender.tag)}
         else{
             currentNumberStr.forEach{
@@ -139,7 +297,6 @@ class ViewController: UIViewController {
     @IBAction func additionalButtons(_ sender: UIButton) {
         currentNumberStr = currentNumberStr.replacingOccurrences(of: ",", with: ".")
         switch sender.tag % 10  {
-            
         case 1:
             setCurrNumToZero()
             clearEverything()
@@ -149,24 +306,28 @@ class ViewController: UIViewController {
             if currentNumberStr == "0"{
                 currentNumberStr = "-0"
                 mainLabel.text = currentNumberStr
-            } else {
-                if let str = Int(currentNumberStr) {
-                    currentNumberStr = String(-str)
-                    currentNumber = Double(str) * -1
-                } else
-                if let str = Double(currentNumberStr) {
-                    currentNumberStr = String(-str)
-                    currentNumber = str * -1
-                }
-                let replaced = currentNumberStr.replacingOccurrences(of: ".", with: ",")
-                mainLabel.text = replaced
+                return
             }
+            intChecker = Int(currentNumber)
+            if Double(intChecker) == currentNumber {
+                currentNumberStr = String(-intChecker)
+                currentNumber = Double(intChecker) * -1
+            } else {
+                currentNumberStr = String(-currentNumber)
+                currentNumber = currentNumber * -1
+                currentNumberStr = currentNumberStr.replacingOccurrences(of: ".", with: ",")
+            }
+            mainLabel.text = currentNumberStr
+            
         case 3:
-            guard let str = Double(currentNumberStr) else {return}
-            currentNumber = round((str/100) * 100000000)/100000000
-            currentNumberStr = String(currentNumber)
-            let replaced = currentNumberStr.replacingOccurrences(of: ".", with: ",")
-            mainLabel.text = replaced
+            currentNumber = currentNumber/100
+            var checkerString = String(currentNumber)
+            if checkerString.count > 9{
+                checkerString = currentNumber.scientificFormatted
+            }
+            checkerString = checkerString.replacingOccurrences(of: ".", with: ",")
+            
+            mainLabel.text = checkerString
         default: return
         }
     }
@@ -175,86 +336,27 @@ class ViewController: UIViewController {
         currentNumberStr = currentNumberStr.replacingOccurrences(of: ",", with: ".")
         switch sender.tag % 20 {
         case 1:
-            action = .divide
-            guard let str = Double(currentNumberStr) else {return}
-            if isFirstDone == true{ firstNumber = str
-                isFirstDone = false
-            } else {
-                firstNumber /= str
-            }
-            setCurrNumToZero()
-            intOrDoubleForFirstNum()
+            toNewNumber(actionType: .divide)
         case 2:
-            action = .multiply
-            guard let str = Double(currentNumberStr) else {return}
-            if isFirstDone == true{ firstNumber = str
-                isFirstDone = false
-            } else
-            {
-                firstNumber *= str
-            }
-            setCurrNumToZero()
-            intOrDoubleForFirstNum()
+            toNewNumber(actionType: .multiply)
         case 3:
-            action = .minus
-            guard let str = Double(currentNumberStr) else {return}
-            if isFirstDone == true{ firstNumber = str
-                isFirstDone = false
-            } else {
-                firstNumber -= str
-            }
-            setCurrNumToZero()
-            intOrDoubleForFirstNum()
+            toNewNumber(actionType: .minus)
         case 4:
-            action = .plus
-            guard let str = Double(currentNumberStr) else {return}
-            if isFirstDone == true{ firstNumber = str
-                isFirstDone = false
-            } else {
-                firstNumber += str
-                setCurrNumToZero()
-            }
-            setCurrNumToZero()
-            intOrDoubleForFirstNum()
+            toNewNumber(actionType: .plus)
         case 5:
-            guard let oneHundredPercentIsDouble = Double(currentNumberStr) else {return}
-            switch action {
-            case .plus:
-                result = firstNumber + oneHundredPercentIsDouble
-                intOrDouble()
-                
-            case .minus:
-                result =  firstNumber - oneHundredPercentIsDouble
-                firstNumber = result
-                intOrDouble()
-                
-            case .multiply:
-                result = firstNumber *  oneHundredPercentIsDouble
-                firstNumber = result
-                intOrDouble()
-                
-            case .divide:
-                if oneHundredPercentIsDouble == 0 {
-                    mainLabel.text = "Ошибка"
-                    return
-                }
-                result = firstNumber /  oneHundredPercentIsDouble
-                result = round(result * 10000000000) / 10000000000
-                firstNumber = result
-                intOrDouble()
-                
-            case .nothing:
-                return
+            if (mainLabel.text == "Ошибка") { return }
+            toNewNumber()
+            if (isThirdNumExists) {
+                compute()
+                isFinalAction = true
             }
-            firstNumber = 0
-            currentNumberStr = String(result)
-            currentNumber = 0
-            action = .nothing
-            isFirstDone = true
+            computeFirstAction()
+            currentNumber = firstNumber
+            currentNumberStr = String(firstNumber)
+            clearAfterComputing()
         default:
             return
         }
     }
-    
-}
 
+}
