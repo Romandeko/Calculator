@@ -1,4 +1,5 @@
-/// Программа еще далеко не идеальная, но пофикшено много багов, добавлена экспоненциальная форма и возможность вычисления действий практически любой сложности. Код не успел привести в нормальный вид, может даже есть лишние переменные
+/* Программа еще далеко не идеальная, но пофикшено много багов,  добавлена экспоненциальная форма, пробелы между цифрами (пока только для целых чисел) и возможность вычисления действий практически любой сложности.  Если несколько раз нажимать на один и тот же знак, правильно посчитает. Например : 3 +++++++++ 3 = 6
+    Для нескольких действий такое добавлю попозже, так как оказалось, что это немного потяжелее, чем я думал*/
 import UIKit
 class ViewController: UIViewController {
     
@@ -25,6 +26,10 @@ class ViewController: UIViewController {
     private var isDot = false
     private var isLastComputed = false
     private var isActionTapped = false
+    private var isPlusTapped = false
+    private var isMinusTapped = false
+    private var isMultTapped = false
+    private var isDivTapped = false
     
     // MARK: - IBOutlets
     @IBOutlet weak var labelVIew: UIView!
@@ -44,14 +49,13 @@ class ViewController: UIViewController {
         allButtons.forEach{
             $0.layer.cornerRadius = $0.frame.height / 2
         }
-        
     }
+    
     // MARK: - Private methods
     private func addSwipe(to view: UIView, with direction: UISwipeGestureRecognizer.Direction){
         let swipeGesture = UISwipeGestureRecognizer(target:self, action: #selector(deleteDigit))
         swipeGesture.direction = direction
         view.addGestureRecognizer(swipeGesture)
-        
     }
     @objc private func deleteDigit(){
         if Int(resultToLabel) != 0{
@@ -81,7 +85,6 @@ class ViewController: UIViewController {
         }
         resultToLabel = checkerString
         setSpacesToLabel()
-        
         mainLabel.text = resultToLabel
     }
     
@@ -93,7 +96,6 @@ class ViewController: UIViewController {
         checkerString = checkerString.replacingOccurrences(of: ".", with: ",")
         resultToLabel =  checkerString
         mainLabel.text = resultToLabel
-        
     }
     
     private func tapNumber(char :Int){
@@ -154,6 +156,10 @@ class ViewController: UIViewController {
         isThirdNumExists = false
         isLastComputed = false
         isFinalAction = false
+        isPlusTapped = false
+        isMultTapped = false
+        isMinusTapped = false
+        isPlusTapped = false
     }
     
     func toNewNumber (actionType: ActionType = .nothing) {
@@ -322,6 +328,7 @@ class ViewController: UIViewController {
         case 3:
             currentNumber = currentNumber/100
             var checkerString = String(currentNumber)
+            currentNumberStr = checkerString
             if checkerString.count > 9{
                 checkerString = currentNumber.scientificFormatted
             }
@@ -337,12 +344,20 @@ class ViewController: UIViewController {
         switch sender.tag % 20 {
         case 1:
             toNewNumber(actionType: .divide)
+            if isDivTapped == true { return }
+            isDivTapped = true
         case 2:
             toNewNumber(actionType: .multiply)
+            if isMultTapped == true { return }
+            isMultTapped = true
         case 3:
             toNewNumber(actionType: .minus)
+            if isMinusTapped == true { return }
+            isMinusTapped = true
         case 4:
             toNewNumber(actionType: .plus)
+            if isPlusTapped == true { return }
+            isPlusTapped = true
         case 5:
             if (mainLabel.text == "Ошибка") { return }
             toNewNumber()
@@ -358,5 +373,4 @@ class ViewController: UIViewController {
             return
         }
     }
-
 }
