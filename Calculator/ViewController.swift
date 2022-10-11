@@ -26,10 +26,6 @@ class ViewController: UIViewController {
     private var isDot = false
     private var isLastComputed = false
     private var isActionTapped = false
-    private var isPlusTapped = false
-    private var isMinusTapped = false
-    private var isMultTapped = false
-    private var isDivTapped = false
     
     // MARK: - IBOutlets
     @IBOutlet weak var labelVIew: UIView!
@@ -156,10 +152,6 @@ class ViewController: UIViewController {
         isThirdNumExists = false
         isLastComputed = false
         isFinalAction = false
-        isPlusTapped = false
-        isMultTapped = false
-        isMinusTapped = false
-        isPlusTapped = false
     }
     
     func toNewNumber (actionType: ActionType = .nothing) {
@@ -344,20 +336,12 @@ class ViewController: UIViewController {
         switch sender.tag % 20 {
         case 1:
             toNewNumber(actionType: .divide)
-            if isDivTapped == true { return }
-            isDivTapped = true
         case 2:
             toNewNumber(actionType: .multiply)
-            if isMultTapped == true { return }
-            isMultTapped = true
         case 3:
             toNewNumber(actionType: .minus)
-            if isMinusTapped == true { return }
-            isMinusTapped = true
         case 4:
             toNewNumber(actionType: .plus)
-            if isPlusTapped == true { return }
-            isPlusTapped = true
         case 5:
             if (mainLabel.text == "Ошибка") { return }
             toNewNumber()
